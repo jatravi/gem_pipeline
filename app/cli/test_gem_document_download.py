@@ -11,7 +11,7 @@ def main() -> None:
     downloader = FileDownloader()
     result = downloader.download_to_path(
         url=url,
-        destination=Path("data/raw/gem") / f"{source_bid_id}.bin",
+        destination=Path("data/raw/gem") / f"{source_bid_id}.pdf",
     )
 
     print(

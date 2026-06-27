@@ -27,8 +27,8 @@ class Bid(Base):
     source_url: Mapped[str | None] = mapped_column(Text)
     first_seen_at: Mapped[datetime | None] = mapped_column(DateTime)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     raw_listing_payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     source_bid_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     parent_source_bid_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -64,7 +64,7 @@ class BidEvent(Base):
     bid_id: Mapped[int] = mapped_column(ForeignKey("bids.id"), nullable=False)
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
     event_details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     pipeline_run_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     bid: Mapped["Bid"] = relationship(back_populates="events")
@@ -82,7 +82,7 @@ class BidDocument(Base):
     file_size: Mapped[int | None] = mapped_column(BigInteger)
     content_hash: Mapped[str | None] = mapped_column(String(128))
     downloaded_at: Mapped[datetime | None] = mapped_column(DateTime)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
     mime_type: Mapped[str | None] = mapped_column(String(100))
     sequence_no: Mapped[int | None] = mapped_column(Integer)
     raw_text: Mapped[str | None] = mapped_column(Text)
@@ -124,7 +124,7 @@ class BidExtraction(Base):
     output_tokens: Mapped[int | None] = mapped_column(Integer)
     cost_inr: Mapped[Decimal | None] = mapped_column(Numeric(12, 4))
     raw_response_json: Mapped[dict | None] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 
     bid: Mapped["Bid"] = relationship(back_populates="extractions")
 
@@ -145,7 +145,7 @@ class BidClassification(Base):
     input_tokens: Mapped[int | None] = mapped_column(Integer)
     output_tokens: Mapped[int | None] = mapped_column(Integer)
     cost_inr: Mapped[Decimal | None] = mapped_column(Numeric(12, 4))
-    created_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
 
     bid: Mapped["Bid"] = relationship(back_populates="classifications")
 
