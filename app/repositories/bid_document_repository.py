@@ -89,3 +89,11 @@ class BidDocumentRepository:
         document.processing_error = error_message
         self.db.flush()
         return document
+    
+    def get_latest_downloaded_document(self) -> BidDocument | None:
+        return (
+            self.db.query(BidDocument)
+            .filter(BidDocument.local_path.isnot(None))
+            .order_by(BidDocument.id.desc())
+            .first()
+        )
