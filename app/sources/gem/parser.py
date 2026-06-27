@@ -15,8 +15,11 @@ class GeMListingParser:
         return parsed
 
     def _parse_doc(self, doc: dict) -> dict | None:
-        bid_number = self._first(doc.get("b_bid_number_parent"))
-        ra_number = self._first(doc.get("b_bid_number"))
+        parent_bid_number = self._first(doc.get("b_bid_number_parent"))
+        current_bid_number = self._first(doc.get("b_bid_number"))
+
+        bid_number = parent_bid_number or current_bid_number
+        ra_number = current_bid_number if parent_bid_number else None
 
         if not bid_number:
             return None
@@ -35,7 +38,13 @@ class GeMListingParser:
             "emd_amount": None,
             "status_code": self._first(doc.get("b_status")),
             "source_url": "https://bidplus.gem.gov.in/all-bids",
-            "raw_doc": doc,
+            "source_bid_id": str(self._first(doc.get("b_id")) or doc.get("id")),
+            "parent_source_bid_id": (
+                str(self._first(doc.get("b_id_parent")))
+                if self._first(doc.get("b_id_parent")) is not None
+                else None
+            ),
+            "raw_listing_payload": doc,
         }
 
     def _first(self, value):

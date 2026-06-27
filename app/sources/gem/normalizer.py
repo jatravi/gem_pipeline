@@ -25,6 +25,9 @@ class GeMBidNormalizer:
             emd_amount=raw_bid.get("emd_amount"),
             status=status,
             source_url=raw_bid.get("source_url"),
+            source_bid_id=raw_bid.get("source_bid_id"),
+            parent_source_bid_id=raw_bid.get("parent_source_bid_id"),
+            raw_listing_payload=raw_bid.get("raw_listing_payload"),
         )
 
     def _map_status(self, status_code) -> str | None:
