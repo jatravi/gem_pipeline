@@ -10,7 +10,10 @@ class PipelineRunRepository:
         self.db = db
 
     def create_run(self, status: str = "running") -> PipelineRun:
-        run = PipelineRun(status=status)
+        run = PipelineRun(
+            status=status,
+            started_at=datetime.utcnow(),
+        )
         self.db.add(run)
         self.db.flush()
         return run

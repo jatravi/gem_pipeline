@@ -1,21 +1,22 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class ParsedBid(BaseModel):
     bid_number: str
-    ra_number: Optional[str] = None
-    title: Optional[str] = None
-    ministry: Optional[str] = None
-    department: Optional[str] = None
-    organisation: Optional[str] = None
-    office: Optional[str] = None
-    start_date: Optional[datetime] = None
-    closing_date: Optional[datetime] = None
-    estimated_value: Optional[Decimal] = None
-    emd_amount: Optional[Decimal] = None
-    status: Optional[str] = None
-    source_url: Optional[str] = None
+    ra_number: str | None = None
+    title: str | None = None
+    ministry: str | None = None
+    department: str | None = None
+    organisation: str | None = None
+    office: str | None = None
+    start_date: datetime | None = None
+    closing_date: datetime | None = None
+    estimated_value: Decimal | None = None
+    emd_amount: Decimal | None = None
+    status: str | None = None
+    source_url: str | None = None
+    source_bid_id: str | None = None
+    parent_source_bid_id: str | None = None
+    raw_listing_payload: dict | None = None

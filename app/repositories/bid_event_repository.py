@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from app.db.models import BidEvent
@@ -18,6 +20,7 @@ class BidEventRepository:
             bid_id=bid_id,
             event_type=event_type,
             event_details=event_details,
+            created_at=datetime.utcnow(),
             pipeline_run_id=pipeline_run_id,
         )
         self.db.add(event)
