@@ -177,3 +177,15 @@ class BidDocumentRepository:
             .order_by(BidDocument.id.desc())
             .first()
         )
+    
+    def get_documents_by_processing_status(
+        self,
+        processing_status: str,
+    ) -> list[BidDocument]:
+        return (
+            self.db.query(BidDocument)
+            .filter(
+                BidDocument.processing_status == processing_status,
+            )
+            .all()
+        )

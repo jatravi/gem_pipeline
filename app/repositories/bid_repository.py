@@ -71,3 +71,9 @@ class BidRepository:
             .limit(limit)
             .all()
         )
+    def get_by_id(self, bid_id: int) -> Bid | None:
+        return (
+            self.db.query(Bid)
+            .filter(Bid.id == bid_id)
+            .first()
+        )
