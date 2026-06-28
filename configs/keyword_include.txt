@@ -1,0 +1,86 @@
+software
+software development
+application
+web application
+mobile application
+portal
+website
+dashboard
+cloud
+hosting
+data
+analytics
+artificial intelligence
+ai
+machine learning
+microsoft
+microsoft 365
+office 365
+m365
+email
+defender
+license
+licenses
+licensing
+software license
+software licenses
+subscription
+cyber security
+cybersecurity
+antivirus
+endpoint security
+erp
+crm
+integration
+system integration
+it services
+it service
+it support
+managed services
+amc
+annual maintenance
+e-governance
+digitization
+document management
+database
+api
+network
+server
+application development
+software solution
+information system
+management system
+monitoring system
+tracking system
+automation
+digital
+digital platform
+workflow
+helpdesk
+ticketing
+asset management
+gis
+network management
+virtualization
+backup
+disaster recovery
+storage
+firewall
+vpn
+soc
+siem
+identity management
+active directory
+ldap
+ssl
+pki
+cloud migration
+azure
+aws
+google cloud
+oracle
+sql
+postgresql
+mysql
+linux
+windows server

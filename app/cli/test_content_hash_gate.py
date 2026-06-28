@@ -1,5 +1,6 @@
-from pathlib import Path
-
+from app.pipelines.gem_content_hash_pipeline import (
+    run_content_hash_gate_pipeline,
+)
 from app.pipelines.gem_document_pipeline import (
     run_document_download_pipeline,
     run_document_text_extraction_pipeline,
@@ -18,7 +19,11 @@ def main() -> None:
 
     downloaded_documents = run_document_download_pipeline(candidates)
 
-    run_document_text_extraction_pipeline(downloaded_documents)
+    processed_documents = run_document_text_extraction_pipeline(
+        downloaded_documents
+    )
+
+    run_content_hash_gate_pipeline(processed_documents)
 
 
 if __name__ == "__main__":

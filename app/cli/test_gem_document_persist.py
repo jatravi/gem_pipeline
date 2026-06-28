@@ -27,7 +27,7 @@ def main() -> None:
         downloader = FileDownloader()
         result = downloader.download_to_path(url=url, destination=destination)
 
-        document = doc_repo.create_downloaded_document(
+        document, created = doc_repo.upsert_downloaded_document(
             bid_id=bid.id,
             file_name=f"{source_bid_id}.pdf",
             document_url=url,
@@ -79,9 +79,8 @@ def main() -> None:
             {
                 "bid_id": bid.id,
                 "document_id": document.id,
+                "created": created,
                 "file_name": document.file_name,
-                "mime_type": document.mime_type,
-                "file_size": document.file_size,
                 "processing_status": document.processing_status,
             }
         )
