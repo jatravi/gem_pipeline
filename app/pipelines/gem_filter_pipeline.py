@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 
 from app.db.session import SessionLocal
-from app.filters.keyword_prefilter import KeywordFilterResult, score_bid_text
+from app.filters.keyword_prefilter import (
+    KeywordFilterResult,
+    score_bid_text,
+)
 from app.repositories.bid_repository import BidRepository
 
 
@@ -22,12 +25,20 @@ class FilteredBidResult:
 def run_keyword_prefilter_pipeline(
     limit: int = 20,
 ) -> list[FilteredBidResult]:
+    """
+    Apply keyword filtering to recently discovered bids.
+
+    Returns only the bids that passed the keyword filter.
+    """
 
     db = SessionLocal()
 
     try:
-        bid_repo = BidRepository(db)
-        bids = bid_repo.get_recent_bids(limit=limit)
+        bid_repository = BidRepository(db)
+
+        bids = bid_repository.get_recent_bids(
+            limit=limit,
+        )
 
         results: list[FilteredBidResult] = []
 
@@ -35,12 +46,16 @@ def run_keyword_prefilter_pipeline(
 
             result: KeywordFilterResult = score_bid_text(
                 title=bid.title,
-                description=getattr(bid, "description", None),
+                description=getattr(
+                    bid,
+                    "description",
+                    None,
+                ),
             )
 
             filtered = FilteredBidResult(
                 bid_id=bid.id,
-                bid_number=bid.bid_number,
+                bid_number=bid.bid_number or "",
                 title=bid.title,
                 is_relevant=result.is_relevant,
                 score=result.score,

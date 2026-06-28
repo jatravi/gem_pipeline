@@ -189,3 +189,14 @@ class BidDocumentRepository:
             )
             .all()
         )
+    
+    def get_processed_documents(self) -> list[BidDocument]:
+        return (
+            self.db.query(BidDocument)
+            .filter(
+                BidDocument.processing_status == "processed",
+                BidDocument.text_hash.isnot(None),
+            )
+            .order_by(BidDocument.bid_id, BidDocument.id)
+            .all()
+        )

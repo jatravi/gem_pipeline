@@ -1,7 +1,8 @@
 from __future__ import annotations
-from app.pipelines.gem_filter_pipeline import FilteredBidResult
+
 from pathlib import Path
 
+from app.db.models import BidDocument
 from app.db.session import SessionLocal
 from app.documents.downloader import FileDownloader
 from app.documents.text_cleaner import clean_document_text
@@ -12,9 +13,13 @@ from app.repositories.bid_document_repository import BidDocumentRepository
 from app.repositories.bid_repository import BidRepository
 from app.sources.gem.documents import build_bid_document_url
 
+
 def run_document_download_pipeline(
     candidates: list[FilteredBidResult],
-) -> None:
+) -> list[BidDocument]:
+    """
+    Download documents for keyword-filtered bids.
+    """
 
     db = SessionLocal()
 
@@ -22,6 +27,8 @@ def run_document_download_pipeline(
         bid_repository = BidRepository(db)
         document_repository = BidDocumentRepository(db)
         downloader = FileDownloader()
+
+        downloaded_documents: list[BidDocument] = []
 
         for candidate in candidates:
 
@@ -34,7 +41,6 @@ def run_document_download_pipeline(
                 continue
 
             try:
-
                 document_url = build_bid_document_url(
                     bid.source_bid_id
                 )
@@ -63,6 +69,8 @@ def run_document_download_pipeline(
                     )
                 )
 
+                downloaded_documents.append(document)
+
                 print(
                     {
                         "bid_id": bid.id,
@@ -73,7 +81,6 @@ def run_document_download_pipeline(
                 )
 
             except Exception as exc:
-
                 print(
                     {
                         "bid_id": bid.id,
@@ -83,6 +90,8 @@ def run_document_download_pipeline(
 
         db.commit()
 
+        return downloaded_documents
+
     except Exception:
         db.rollback()
         raise
@@ -90,9 +99,12 @@ def run_document_download_pipeline(
     finally:
         db.close()
 
-def run_document_text_extraction_pipeline() -> None:
+
+def run_document_text_extraction_pipeline(
+    documents: list[BidDocument],
+) -> list[BidDocument]:
     """
-    Extract text from every downloaded document and persist the results.
+    Extract text from downloaded documents.
     """
 
     db = SessionLocal()
@@ -101,11 +113,11 @@ def run_document_text_extraction_pipeline() -> None:
         repository = BidDocumentRepository(db)
         extractor = PdfTextExtractor()
 
-        documents = repository.get_documents_by_processing_status(
-            "downloaded"
-        )
+        processed_documents: list[BidDocument] = []
 
         for document in documents:
+
+            document = db.merge(document)
 
             try:
 
@@ -129,7 +141,7 @@ def run_document_text_extraction_pipeline() -> None:
                     cleaned_text
                 )
 
-                repository.update_text_processing(
+                updated = repository.update_text_processing(
                     document_id=document.id,
                     raw_text=extraction.raw_text,
                     cleaned_text=cleaned_text,
@@ -137,6 +149,9 @@ def run_document_text_extraction_pipeline() -> None:
                     text_extraction_method=extraction.method,
                     page_count=extraction.page_count,
                 )
+
+                if updated is not None:
+                    processed_documents.append(updated)
 
                 print(
                     {
@@ -163,6 +178,8 @@ def run_document_text_extraction_pipeline() -> None:
                 )
 
         db.commit()
+
+        return processed_documents
 
     except Exception:
         db.rollback()
