@@ -1,43 +1,29 @@
-from app.filters.content_hash_gate import should_skip_llm_due_to_same_text
+from app.pipelines.gem_content_hash_pipeline import (
+    run_content_hash_gate_pipeline,
+)
+from app.pipelines.gem_document_pipeline import (
+    run_document_download_pipeline,
+    run_document_text_extraction_pipeline,
+)
+from app.pipelines.gem_filter_pipeline import (
+    run_keyword_prefilter_pipeline,
+)
 
 
 def main() -> None:
-    samples = [
-        {
-            "name": "same hashes",
-            "current_text_hash": "abc123",
-            "previous_text_hash": "abc123",
-        },
-        {
-            "name": "different hashes",
-            "current_text_hash": "abc123",
-            "previous_text_hash": "xyz789",
-        },
-        {
-            "name": "missing current hash",
-            "current_text_hash": None,
-            "previous_text_hash": "xyz789",
-        },
-        {
-            "name": "missing previous hash",
-            "current_text_hash": "abc123",
-            "previous_text_hash": None,
-        },
-    ]
+    candidates = run_keyword_prefilter_pipeline(limit=20)
 
-    for sample in samples:
-        result = should_skip_llm_due_to_same_text(
-            current_text_hash=sample["current_text_hash"],
-            previous_text_hash=sample["previous_text_hash"],
-        )
-        print(
-            {
-                "name": sample["name"],
-                "current_text_hash": sample["current_text_hash"],
-                "previous_text_hash": sample["previous_text_hash"],
-                "should_skip": result,
-            }
-        )
+    if not candidates:
+        print("No candidate bids found.")
+        return
+
+    downloaded_documents = run_document_download_pipeline(candidates)
+
+    processed_documents = run_document_text_extraction_pipeline(
+        downloaded_documents
+    )
+
+    run_content_hash_gate_pipeline(processed_documents)
 
 
 if __name__ == "__main__":

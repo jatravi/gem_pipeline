@@ -48,9 +48,6 @@ def run_content_hash_gate_pipeline(
 
             previous_hashes[document.bid_id] = document.text_hash or ""
 
-        print()
-        print(f"LLM Candidates : {len(llm_candidates)}")
-
         return llm_candidates
 
     finally:
