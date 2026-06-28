@@ -1,0 +1,37 @@
+furniture
+chair
+table
+car
+bus
+truck
+tractor
+stationery
+paper
+printer cartridge
+toner
+uniform
+shoe
+housekeeping
+cleaning
+manpower supply
+canteen
+catering
+civil work
+construction
+road work
+building repair
+electrical work
+plumbing
+medical equipment
+hospital bed
+drug
+medicine
+laboratory reagent
+food supply
+kitchen equipment
+gravel
+transformer
+golf cart
+paint
+radar
+tray

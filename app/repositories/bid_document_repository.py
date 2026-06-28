@@ -90,10 +90,90 @@ class BidDocumentRepository:
         self.db.flush()
         return document
     
-    def get_latest_downloaded_document(self) -> BidDocument | None:
+    def get_by_bid_id_and_sequence(
+        self,
+        *,
+        bid_id: int,
+        sequence_no: int,
+    ) -> BidDocument | None:
         return (
             self.db.query(BidDocument)
-            .filter(BidDocument.local_path.isnot(None))
+            .filter(
+                BidDocument.bid_id == bid_id,
+                BidDocument.sequence_no == sequence_no,
+            )
+            .first()
+        )
+    
+    def upsert_downloaded_document(
+        self,
+        *,
+        bid_id: int,
+        file_name: str,
+        document_url: str,
+        local_path: str | Path,
+        file_size: int,
+        content_hash: str,
+        mime_type: str | None,
+        document_type: str = "main_bid_document",
+        sequence_no: int = 1,
+        downloaded_at: datetime | None = None,
+        processing_status: str = "downloaded",
+    ) -> tuple[BidDocument, bool]:
+        existing = self.get_by_bid_id_and_sequence(
+            bid_id=bid_id,
+            sequence_no=sequence_no,
+        )
+        now = datetime.utcnow()
+    
+        if existing:
+            existing.document_type = document_type
+            existing.file_name = file_name
+            existing.document_url = document_url
+            existing.local_path = str(local_path)
+            existing.file_size = file_size
+            existing.content_hash = content_hash
+            existing.downloaded_at = downloaded_at or now
+            existing.mime_type = mime_type
+    
+            existing.raw_text = None
+            existing.cleaned_text = None
+            existing.text_hash = None
+            existing.text_extracted_at = None
+            existing.text_extraction_method = None
+            existing.page_count = None
+            existing.processing_status = processing_status
+            existing.processing_error = None
+    
+            self.db.flush()
+            return existing, False
+    
+        document = BidDocument(
+            bid_id=bid_id,
+            document_type=document_type,
+            file_name=file_name,
+            document_url=document_url,
+            local_path=str(local_path),
+            file_size=file_size,
+            content_hash=content_hash,
+            downloaded_at=downloaded_at or now,
+            created_at=now,
+            mime_type=mime_type,
+            sequence_no=sequence_no,
+            processing_status=processing_status,
+        )
+        self.db.add(document)
+        self.db.flush()
+        return document, True
+    
+    def get_latest_processed_document_for_bid(self, bid_id: int) -> BidDocument | None:
+        return (
+            self.db.query(BidDocument)
+            .filter(
+                BidDocument.bid_id == bid_id,
+                BidDocument.processing_status == "processed",
+                BidDocument.text_hash.isnot(None),
+            )
             .order_by(BidDocument.id.desc())
             .first()
         )
