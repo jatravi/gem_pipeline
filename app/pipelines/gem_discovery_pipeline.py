@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.pipelines.gem_llm_pipeline import run_llm_extraction_pipeline
+
 from app.pipelines.gem_content_hash_pipeline import (
     run_content_hash_gate_pipeline,
 )
@@ -79,11 +81,12 @@ def run_gem_discovery_pipeline(
     print()
     print(f"LLM Candidates : {len(llm_candidates)}")
 
-    #
-    # Next stage:
-    #
-    # run_llm_extraction_pipeline(llm_candidates)
-    #
+    print()
+    print("=" * 70)
+    print("STEP 6 : LLM Extraction")
+    print("=" * 70)
+
+    extractions = run_llm_extraction_pipeline(llm_candidates)
 
     print()
     print("=" * 70)
