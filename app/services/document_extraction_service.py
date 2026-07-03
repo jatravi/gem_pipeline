@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 from decimal import Decimal
+
 from sqlalchemy.orm import Session
 
 from app.db.models import BidDocument, BidExtraction
-from app.llm.client import FakeLLMExtractor
+from app.llm.client import BaseLLMExtractor, get_llm_extractor
 from app.repositories.bid_extraction_repository import BidExtractionRepository
 
 
@@ -11,25 +13,20 @@ class DocumentExtractionService:
     def __init__(
         self,
         db: Session,
-        extractor: FakeLLMExtractor | None = None,
+        extractor: BaseLLMExtractor | None = None,
     ) -> None:
         self.db = db
-        self.extractor = extractor or FakeLLMExtractor()
+        self.extractor = extractor or get_llm_extractor()
         self.repository = BidExtractionRepository(db)
 
     def extract_document(
         self,
         document: BidDocument,
     ) -> BidExtraction:
-
         if not document.cleaned_text:
-            raise ValueError(
-                f"Document {document.id} has no cleaned text."
-            )
+            raise ValueError(f"Document {document.id} has no cleaned text.")
 
-        extraction = self.extractor.extract_tender_details(
-            document.cleaned_text
-        )
+        extraction = self.extractor.extract_tender_details(document.cleaned_text)
 
         bid_extraction = self.repository.create_extraction(
             bid_id=document.bid_id,
@@ -66,7 +63,6 @@ class DocumentExtractionService:
         self,
         documents: list[BidDocument],
     ) -> list[BidExtraction]:
-
         results: list[BidExtraction] = []
 
         for document in documents:
