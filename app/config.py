@@ -1,10 +1,8 @@
 from pathlib import Path
 
+from decimal import Decimal
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from app.llm.client import BaseLLMExtractor
-from app.llm.schemas import TenderLLMExtraction
 
 
 class Settings(BaseSettings):
@@ -28,11 +26,16 @@ class Settings(BaseSettings):
     DATA_DIR: str = "data"
     RAW_GEM_DIR: str = "data/raw/gem"
 
-    LLM_FALLBACK_TO_FAKE_ON_ERROR: bool = True
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "qwen3:4b"
+
     LLM_PROVIDER: str = "fake"
     LLM_API_KEY: str | None = None
     LLM_MODEL: str = "gpt-4o-mini"
     LLM_MAX_INPUT_CHARS: int = 15000
+    LLM_FALLBACK_TO_FAKE_ON_ERROR: bool = True
+    LLM_INPUT_COST_PER_1K_TOKENS_INR: Decimal = Decimal("0")
+    LLM_OUTPUT_COST_PER_1K_TOKENS_INR: Decimal = Decimal("0")
 
     @computed_field
     @property
@@ -57,19 +60,6 @@ class Settings(BaseSettings):
     def ensure_directories(self) -> None:
         self.data_dir_path.mkdir(parents=True, exist_ok=True)
         self.raw_gem_dir_path.mkdir(parents=True, exist_ok=True)
-
-class SafeLLMExtractor:
-    def __init__(self, primary: BaseLLMExtractor, fallback: BaseLLMExtractor | None = None):
-        self.primary = primary
-        self.fallback = fallback
-
-    def extract_tender_details(self, text: str) -> TenderLLMExtraction:
-        try:
-            return self.primary.extract_tender_details(text)
-        except Exception:
-            if self.fallback is not None:
-                return self.fallback.extract_tender_details(text)
-            raise
 
 
 settings = Settings()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.pipelines.gem_llm_pipeline import run_llm_extraction_pipeline
-
+from app.config import settings
 from app.pipelines.gem_content_hash_pipeline import (
     run_content_hash_gate_pipeline,
 )

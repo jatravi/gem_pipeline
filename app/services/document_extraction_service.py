@@ -26,7 +26,9 @@ class DocumentExtractionService:
         if not document.cleaned_text:
             raise ValueError(f"Document {document.id} has no cleaned text.")
 
-        extraction = self.extractor.extract_tender_details(document.cleaned_text)
+        result = self.extractor.extract_tender_details(document.cleaned_text)
+        extraction = result.extraction
+        usage = result.usage
 
         bid_extraction = self.repository.create_extraction(
             bid_id=document.bid_id,
@@ -48,42 +50,16 @@ class DocumentExtractionService:
             relevance_reason="LLM extraction completed.",
             confidence=Decimal("1.0000"),
             prompt_version="v1",
-            input_tokens=None,
-            output_tokens=None,
-            cost_inr=None,
-            raw_response_json=extraction.model_dump(),
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            cost_inr=usage.cost_inr,
+            raw_response_json={
+                "extraction": extraction.model_dump(),
+                "usage": usage.model_dump(mode="json"),
+            },
         )
 
         self.db.commit()
         self.db.refresh(bid_extraction)
 
         return bid_extraction
-
-    def extract_documents(
-        self,
-        documents: list[BidDocument],
-    ) -> list[BidExtraction]:
-        results: list[BidExtraction] = []
-
-        for document in documents:
-            try:
-                extraction = self.extract_document(document)
-                results.append(extraction)
-
-                print(
-                    {
-                        "document_id": document.id,
-                        "bid_id": document.bid_id,
-                        "extraction_id": extraction.id,
-                    }
-                )
-
-            except Exception as exc:
-                print(
-                    {
-                        "document_id": document.id,
-                        "error": str(exc),
-                    }
-                )
-
-        return results

@@ -1,7 +1,17 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Numeric, String, Text, BigInteger
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -163,3 +173,22 @@ class BidReview(Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime)
 
     bid: Mapped["Bid"] = relationship(back_populates="reviews")
+
+class CompanyProfile(Base):
+    __tablename__ = "company_profiles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    profile_version: Mapped[str] = mapped_column(String(50), unique=True, nullable=False,)
+    company_name: Mapped[str] = mapped_column(Text,nullable=False,)
+    services: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
+    industries: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
+    min_project_value_inr: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    max_project_value_inr: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    min_turnover_inr: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    certifications: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
+    excluded_keywords: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
+    preferred_keywords: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
+    geo_preferences: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
+    active: Mapped[bool] = mapped_column( Boolean,nullable=False,default=True,)
+    created_at: Mapped[datetime] = mapped_column(DateTime,nullable=False,server_default=func.now(),)
+    updated_at: Mapped[datetime] = mapped_column(DateTime,nullable=False,server_default=func.now(),onupdate=func.now(),)
