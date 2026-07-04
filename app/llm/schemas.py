@@ -20,10 +20,12 @@ class TenderLLMExtraction(BaseModel):
 
 class LLMUsageMetadata(BaseModel):
     model: str
+    provider: str
     input_tokens: int | None = None
     output_tokens: int | None = None
     total_tokens: int | None = None
     cost_inr: Decimal | None = None
+    fallback_used: bool = False
 
 
 class TenderLLMExtractionResult(BaseModel):

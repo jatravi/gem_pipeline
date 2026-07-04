@@ -159,6 +159,23 @@ class BidClassification(Base):
 
     bid: Mapped["Bid"] = relationship(back_populates="classifications")
 
+    @property
+    def is_relevant(self) -> bool:
+        return self.classification_label == "relevant"
+
+    @is_relevant.setter
+    def is_relevant(self, value: bool) -> None:
+        self.classification_label = "relevant" if value else "not_relevant"
+
+    @property
+    def relevance_reason(self) -> str | None:
+        return self.decision_reason
+
+    @relevance_reason.setter
+    def relevance_reason(self, value: str | None) -> None:
+        self.decision_reason = value
+
+
 
 class BidReview(Base):
     __tablename__ = "bid_reviews"

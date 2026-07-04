@@ -6,7 +6,7 @@ from app.db.models import BidDocument
 from app.db.session import SessionLocal
 from app.documents.downloader import FileDownloader
 from app.documents.text_cleaner import clean_document_text
-from app.documents.text_extractor import PdfTextExtractor
+from app.documents.text_extractor import PdfTextExtractor, InvalidPDFError
 from app.documents.text_hashing import compute_text_hash
 from app.pipelines.gem_filter_pipeline import FilteredBidResult
 from app.repositories.bid_document_repository import BidDocumentRepository
@@ -122,14 +122,9 @@ def run_document_text_extraction_pipeline(
             try:
 
                 if not document.local_path:
-                    raise RuntimeError(
-                        f"Document {document.id} has no local_path."
-                    )
+                    raise InvalidPDFError("missing_file")
 
                 pdf_path = Path(document.local_path)
-
-                if not pdf_path.exists():
-                    raise FileNotFoundError(pdf_path)
 
                 extraction = extractor.extract(pdf_path)
 
@@ -162,18 +157,43 @@ def run_document_text_extraction_pipeline(
                     }
                 )
 
-            except Exception as exc:
-
+            except InvalidPDFError as exc:
                 repository.mark_processing_failed(
                     document_id=document.id,
-                    error_message=str(exc),
+                    error_message=exc.reason_code,
                 )
-
                 print(
                     {
                         "document_id": document.id,
                         "status": "failed",
-                        "error": str(exc),
+                        "error_code": exc.reason_code,
+                    }
+                )
+
+            except FileNotFoundError:
+                repository.mark_processing_failed(
+                    document_id=document.id,
+                    error_message="missing_file",
+                )
+                print(
+                    {
+                        "document_id": document.id,
+                        "status": "failed",
+                        "error_code": "missing_file",
+                    }
+                )
+
+            except Exception as exc:
+                repository.mark_processing_failed(
+                    document_id=document.id,
+                    error_message="invalid_pdf_signature",
+                )
+                print(
+                    {
+                        "document_id": document.id,
+                        "status": "failed",
+                        "error_code": "invalid_pdf_signature",
+                        "error_details": str(exc),
                     }
                 )
 
