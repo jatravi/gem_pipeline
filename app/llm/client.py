@@ -1,5 +1,6 @@
 from __future__ import annotations
-
+import json
+import time
 from decimal import Decimal
 from pathlib import Path
 from typing import Protocol
@@ -19,8 +20,7 @@ PROMPT_FILE = Path(__file__).resolve().parent / "prompts" / "tender_extraction.t
 
 
 class BaseLLMExtractor(Protocol):
-    def extract_tender_details(self, text: str) -> TenderLLMExtractionResult:
-        ...
+    def extract_tender_details(self, text: str) -> TenderLLMExtractionResult: ...
 
 
 def _load_system_prompt() -> str:
@@ -47,14 +47,14 @@ def check_ollama_health() -> None:
 
     models = [m["name"] for m in data.get("models", [])]
     configured_model = settings.OLLAMA_MODEL
-    
+
     # Check if the configured model exists (allowing suffix matching like :latest)
     found = False
     for m in models:
         if m == configured_model or m.split(":")[0] == configured_model.split(":")[0]:
             found = True
             break
-            
+
     if not found:
         raise ValueError(
             f"Configured Ollama model '{configured_model}' is not pulled. "
@@ -90,7 +90,6 @@ class FakeLLMExtractor:
 
 class OllamaLLMExtractor:
     def __init__(self) -> None:
-        # Run Ollama health check once upon initialization
         check_ollama_health()
 
         self.system_prompt = _load_system_prompt()
@@ -101,20 +100,49 @@ class OllamaLLMExtractor:
             model=self.model,
             base_url=settings.OLLAMA_BASE_URL,
             temperature=0,
+            request_timeout=300,
         )
-        self.structured_llm = self.llm.with_structured_output(TenderLLMExtraction)
 
     def extract_tender_details(self, text: str) -> TenderLLMExtractionResult:
         trimmed = (text or "").strip()[: self.max_input_chars]
+
         if not trimmed:
             raise ValueError("Cannot run LLM extraction on empty text.")
 
-        extraction = self.structured_llm.invoke(
-            [
-                ("system", self.system_prompt),
-                ("human", f"Extract structured tender data from:\n\n{trimmed}"),
-            ]
-        )
+        print("=" * 80)
+        print("OLLAMA DEBUG")
+        print(f"Model: {self.model}")
+        print(f"Characters: {len(trimmed)}")
+        print(f"Approx Tokens: {len(trimmed)//4}")
+        print("=" * 80)
+
+        messages = [
+            ("system", self.system_prompt),
+            ("human", f"Extract structured tender data from:\n\n{trimmed}"),
+        ]
+
+        start = time.perf_counter()
+
+        response = self.llm.invoke(messages)
+
+        elapsed = time.perf_counter() - start
+
+        print("=" * 80)
+        print(f"LLM finished in {elapsed:.2f} seconds")
+        print("=" * 80)
+
+        print("RAW RESPONSE:")
+        print(response.content)
+        print("=" * 80)
+
+        try:
+            data = json.loads(response.content)
+        except Exception as e:
+            raise RuntimeError(
+                f"Model did not return valid JSON.\n\n{response.content}"
+            ) from e
+
+        extraction = TenderLLMExtraction.model_validate(data)
 
         usage = LLMUsageMetadata(
             model=self.model,
@@ -125,7 +153,10 @@ class OllamaLLMExtractor:
             cost_inr=Decimal("0"),
         )
 
-        return TenderLLMExtractionResult(extraction=extraction, usage=usage)
+        return TenderLLMExtractionResult(
+            extraction=extraction,
+            usage=usage,
+        )
 
 
 class OpenAILLMExtractor:
@@ -141,7 +172,9 @@ class OpenAILLMExtractor:
             temperature=0,
         )
         # include_raw=True allows us to capture the token usage metadata from the AIMessage response
-        self.structured_llm = self.llm.with_structured_output(TenderLLMExtraction, include_raw=True)
+        self.structured_llm = self.llm.with_structured_output(
+            TenderLLMExtraction, include_raw=True
+        )
 
     def extract_tender_details(self, text: str) -> TenderLLMExtractionResult:
         trimmed = (text or "").strip()[: self.max_input_chars]
@@ -173,9 +206,13 @@ class OpenAILLMExtractor:
         input_cost = Decimal("0")
         output_cost = Decimal("0")
         if input_tokens is not None:
-            input_cost = (Decimal(input_tokens) / Decimal("1000")) * settings.LLM_INPUT_COST_PER_1K_TOKENS_INR
+            input_cost = (
+                Decimal(input_tokens) / Decimal("1000")
+            ) * settings.LLM_INPUT_COST_PER_1K_TOKENS_INR
         if output_tokens is not None:
-            output_cost = (Decimal(output_tokens) / Decimal("1000")) * settings.LLM_OUTPUT_COST_PER_1K_TOKENS_INR
+            output_cost = (
+                Decimal(output_tokens) / Decimal("1000")
+            ) * settings.LLM_OUTPUT_COST_PER_1K_TOKENS_INR
         cost_inr = input_cost + output_cost
 
         usage = LLMUsageMetadata(
@@ -191,7 +228,9 @@ class OpenAILLMExtractor:
 
 
 class SafeLLMExtractor:
-    def __init__(self, primary: BaseLLMExtractor, fallback: BaseLLMExtractor | None = None) -> None:
+    def __init__(
+        self, primary: BaseLLMExtractor, fallback: BaseLLMExtractor | None = None
+    ) -> None:
         self.primary = primary
         self.fallback = fallback
 
@@ -201,11 +240,13 @@ class SafeLLMExtractor:
         except Exception as exc:
             if self.fallback is not None:
                 # Log structured fallback event without exposing sensitive info
-                print({
-                    "event": "llm_fallback_triggered",
-                    "primary_error": str(exc),
-                    "fallback_provider": "fake"
-                })
+                print(
+                    {
+                        "event": "llm_fallback_triggered",
+                        "primary_error": str(exc),
+                        "fallback_provider": "fake",
+                    }
+                )
                 result = self.fallback.extract_tender_details(text)
                 result.usage.fallback_used = True
                 return result

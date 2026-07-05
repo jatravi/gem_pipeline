@@ -4,6 +4,7 @@ Tests for the LLM client module.
 Tests the FakeLLMExtractor, SafeLLMExtractor, and get_llm_extractor factory.
 No real LLM calls are made.
 """
+
 from __future__ import annotations
 
 from decimal import Decimal
@@ -58,6 +59,7 @@ class TestSafeLLMExtractor:
         safe = SafeLLMExtractor(primary=primary, fallback=None)
 
         import pytest
+
         with pytest.raises(RuntimeError, match="LLM unavailable"):
             safe.extract_tender_details("tender text")
 

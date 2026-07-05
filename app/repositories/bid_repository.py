@@ -63,17 +63,9 @@ class BidRepository:
         self.db.add(bid)
         self.db.flush()
         return bid, True
-    
+
     def get_recent_bids(self, limit: int = 20):
-        return (
-            self.db.query(Bid)
-            .order_by(Bid.id.desc())
-            .limit(limit)
-            .all()
-        )
+        return self.db.query(Bid).order_by(Bid.id.desc()).limit(limit).all()
+
     def get_by_id(self, bid_id: int) -> Bid | None:
-        return (
-            self.db.query(Bid)
-            .filter(Bid.id == bid_id)
-            .first()
-        )
+        return self.db.query(Bid).filter(Bid.id == bid_id).first()

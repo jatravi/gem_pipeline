@@ -12,7 +12,9 @@ from app.pipelines.gem_document_pipeline import (
 )
 from app.pipelines.gem_content_hash_pipeline import run_content_hash_gate_pipeline
 from app.pipelines.gem_llm_pipeline import run_llm_extraction_pipeline
-from app.pipelines.post_classification_pipeline import run_bid_classification_post_activity
+from app.pipelines.post_classification_pipeline import (
+    run_bid_classification_post_activity,
+)
 from app.llm.client import check_ollama_health
 
 
@@ -51,7 +53,7 @@ def run_gem_pipeline(limit: int = 20) -> dict:
     print("STAGE 2 : Keyword Prefilter")
     print("=" * 70)
     candidates = run_keyword_prefilter_pipeline(limit=limit)
-    bids_scanned = bids_discovered # Bids evaluated from recent run
+    bids_scanned = bids_discovered  # Bids evaluated from recent run
     bids_relevant = len(candidates)
 
     print()
@@ -81,14 +83,25 @@ def run_gem_pipeline(limit: int = 20) -> dict:
     print("STAGE 6 : LLM Extraction")
     print("=" * 70)
     extractions, llm_summary = run_llm_extraction_pipeline(llm_candidates)
+    # llm_summary = {
+    #     "llm_success": len(extractions),
+    #     "llm_failed": len(llm_candidates) - len(extractions),
+    #     "llm_fallback_used": 0,
+    #     "llm_estimated_cost_inr": Decimal("0"),
+    # }
 
     print()
     print("=" * 70)
     print("STAGE 7 : Bid Classification")
     print("=" * 70)
-    successful_bid_ids = [ex.bid_id for ex in extractions]
+    successful_bid_ids = []
+
+    for ex in extractions:
+        successful_bid_ids.append(ex.bid_id)
     if successful_bid_ids:
-        classifications = run_bid_classification_post_activity(bid_ids=successful_bid_ids)
+        classifications = run_bid_classification_post_activity(
+            bid_ids=successful_bid_ids
+        )
         print(f"Classified {len(classifications)} bids.")
     else:
         print("No successful extractions to classify.")

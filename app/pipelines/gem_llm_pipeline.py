@@ -60,13 +60,12 @@ def run_llm_extraction_pipeline(
                     }
                 )
 
-        summary = {
+        return extractions, {
             "llm_success": llm_success,
             "llm_failed": llm_failed,
             "llm_fallback_used": llm_fallback_used,
             "llm_estimated_cost_inr": llm_estimated_cost_inr,
         }
-        return extractions, summary
 
     finally:
         db.close()

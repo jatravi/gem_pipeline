@@ -1,6 +1,7 @@
 """
 Tests for the text cleaning and hashing utilities.
 """
+
 from __future__ import annotations
 
 from app.documents.text_cleaner import clean_document_text

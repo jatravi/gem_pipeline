@@ -3,6 +3,7 @@ Tests for the keyword prefilter module.
 
 These tests are pure unit tests — no database or network required.
 """
+
 from __future__ import annotations
 
 from app.filters.keyword_prefilter import (

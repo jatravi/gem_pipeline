@@ -89,7 +89,7 @@ class BidDocumentRepository:
         document.processing_error = error_message
         self.db.flush()
         return document
-    
+
     def get_by_bid_id_and_sequence(
         self,
         *,
@@ -104,7 +104,7 @@ class BidDocumentRepository:
             )
             .first()
         )
-    
+
     def upsert_downloaded_document(
         self,
         *,
@@ -125,7 +125,7 @@ class BidDocumentRepository:
             sequence_no=sequence_no,
         )
         now = datetime.utcnow()
-    
+
         if existing:
             existing.document_type = document_type
             existing.file_name = file_name
@@ -135,7 +135,7 @@ class BidDocumentRepository:
             existing.content_hash = content_hash
             existing.downloaded_at = downloaded_at or now
             existing.mime_type = mime_type
-    
+
             existing.raw_text = None
             existing.cleaned_text = None
             existing.text_hash = None
@@ -144,10 +144,10 @@ class BidDocumentRepository:
             existing.page_count = None
             existing.processing_status = processing_status
             existing.processing_error = None
-    
+
             self.db.flush()
             return existing, False
-    
+
         document = BidDocument(
             bid_id=bid_id,
             document_type=document_type,
@@ -165,7 +165,7 @@ class BidDocumentRepository:
         self.db.add(document)
         self.db.flush()
         return document, True
-    
+
     def get_latest_processed_document_for_bid(self, bid_id: int) -> BidDocument | None:
         return (
             self.db.query(BidDocument)
@@ -177,7 +177,7 @@ class BidDocumentRepository:
             .order_by(BidDocument.id.desc())
             .first()
         )
-    
+
     def get_documents_by_processing_status(
         self,
         processing_status: str,
@@ -189,7 +189,7 @@ class BidDocumentRepository:
             )
             .all()
         )
-    
+
     def get_processed_documents(self) -> list[BidDocument]:
         return (
             self.db.query(BidDocument)

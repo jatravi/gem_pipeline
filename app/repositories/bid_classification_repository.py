@@ -5,6 +5,7 @@ from decimal import Decimal
 from sqlalchemy.orm import Session
 from app.db.models import BidClassification
 
+
 class BidClassificationRepository:
     def __init__(self, db: Session) -> None:
         self.db = db

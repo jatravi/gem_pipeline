@@ -16,12 +16,16 @@ class BidClassificationService:
         self.extraction_repo = BidExtractionRepository(db)
         self.profile_repo = CompanyProfileRepository(db)
 
-    def classify_bids(self, bid_ids: list[int] | None = None) -> list[BidClassification]:
+    def classify_bids(
+        self, bid_ids: list[int] | None = None
+    ) -> list[BidClassification]:
         profile = self.profile_repo.get_active_profile()
         if not profile:
             raise ValueError("No active company profile found.")
 
-        extractions = self.extraction_repo.get_latest_extractions_for_classification(bid_ids=bid_ids)
+        extractions = self.extraction_repo.get_latest_extractions_for_classification(
+            bid_ids=bid_ids
+        )
 
         results: list[BidClassification] = []
 
@@ -34,8 +38,12 @@ class BidClassificationService:
             ).lower()
 
             score = 0
-            preferred_hits = [k for k in (profile.preferred_keywords or []) if k.lower() in text]
-            excluded_hits = [k for k in (profile.excluded_keywords or []) if k.lower() in text]
+            preferred_hits = [
+                k for k in (profile.preferred_keywords or []) if k.lower() in text
+            ]
+            excluded_hits = [
+                k for k in (profile.excluded_keywords or []) if k.lower() in text
+            ]
 
             score += len(preferred_hits)
             score -= 2 * len(excluded_hits)

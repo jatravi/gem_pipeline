@@ -1,4 +1,6 @@
-from app.pipelines.post_classification_pipeline import run_bid_classification_post_activity
+from app.pipelines.post_classification_pipeline import (
+    run_bid_classification_post_activity,
+)
 
 
 def main() -> None:

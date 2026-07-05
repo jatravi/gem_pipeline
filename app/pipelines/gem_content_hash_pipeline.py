@@ -24,9 +24,7 @@ def run_content_hash_gate_pipeline(
 
             document = db.merge(document)
 
-            previous_hash = previous_hashes.get(
-                document.bid_id
-            )
+            previous_hash = previous_hashes.get(document.bid_id)
 
             skip_llm = should_skip_llm_due_to_same_text(
                 current_text_hash=document.text_hash,

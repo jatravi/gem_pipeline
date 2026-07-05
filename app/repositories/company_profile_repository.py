@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.orm import Session
 from app.db.models import CompanyProfile
 
+
 class CompanyProfileRepository:
     def __init__(self, db: Session) -> None:
         self.db = db

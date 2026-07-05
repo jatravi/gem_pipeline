@@ -1,10 +1,6 @@
 class GeMListingParser:
     def parse_listing_docs(self, payload: dict) -> list[dict]:
-        docs = (
-            payload.get("response", {})
-            .get("response", {})
-            .get("docs", [])
-        )
+        docs = payload.get("response", {}).get("response", {}).get("docs", [])
 
         parsed = []
         for doc in docs:
@@ -27,7 +23,8 @@ class GeMListingParser:
         return {
             "bid_number": bid_number,
             "ra_number": ra_number,
-            "title": self._first(doc.get("b_category_name")) or self._first(doc.get("bd_category_name")),
+            "title": self._first(doc.get("b_category_name"))
+            or self._first(doc.get("bd_category_name")),
             "ministry": self._first(doc.get("ba_official_details_minName")),
             "department": self._first(doc.get("ba_official_details_deptName")),
             "organisation": None,

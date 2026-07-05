@@ -37,8 +37,12 @@ class Bid(Base):
     source_url: Mapped[str | None] = mapped_column(Text)
     first_seen_at: Mapped[datetime | None] = mapped_column(DateTime)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
     raw_listing_payload: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     source_bid_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     parent_source_bid_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -46,7 +50,9 @@ class Bid(Base):
     documents: Mapped[list["BidDocument"]] = relationship(back_populates="bid")
     events: Mapped[list["BidEvent"]] = relationship(back_populates="bid")
     extractions: Mapped[list["BidExtraction"]] = relationship(back_populates="bid")
-    classifications: Mapped[list["BidClassification"]] = relationship(back_populates="bid")
+    classifications: Mapped[list["BidClassification"]] = relationship(
+        back_populates="bid"
+    )
     reviews: Mapped[list["BidReview"]] = relationship(back_populates="bid")
 
 
@@ -63,7 +69,9 @@ class PipelineRun(Base):
     llm_calls: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     input_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     output_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    total_cost_inr: Mapped[Decimal] = mapped_column(Numeric(12, 4), nullable=False, default=0)
+    total_cost_inr: Mapped[Decimal] = mapped_column(
+        Numeric(12, 4), nullable=False, default=0
+    )
     error_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
@@ -74,7 +82,9 @@ class BidEvent(Base):
     bid_id: Mapped[int] = mapped_column(ForeignKey("bids.id"), nullable=False)
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
     event_details: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
     pipeline_run_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     bid: Mapped["Bid"] = relationship(back_populates="events")
@@ -92,7 +102,9 @@ class BidDocument(Base):
     file_size: Mapped[int | None] = mapped_column(BigInteger)
     content_hash: Mapped[str | None] = mapped_column(String(128))
     downloaded_at: Mapped[datetime | None] = mapped_column(DateTime)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
     mime_type: Mapped[str | None] = mapped_column(String(100))
     sequence_no: Mapped[int | None] = mapped_column(Integer)
     raw_text: Mapped[str | None] = mapped_column(Text)
@@ -105,6 +117,7 @@ class BidDocument(Base):
     processing_error: Mapped[str | None] = mapped_column(Text)
 
     bid: Mapped["Bid"] = relationship(back_populates="documents")
+
 
 class BidExtraction(Base):
     __tablename__ = "bid_extractions"
@@ -134,7 +147,9 @@ class BidExtraction(Base):
     output_tokens: Mapped[int | None] = mapped_column(Integer)
     cost_inr: Mapped[Decimal | None] = mapped_column(Numeric(12, 4))
     raw_response_json: Mapped[dict | None] = mapped_column(JSONB)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
 
     bid: Mapped["Bid"] = relationship(back_populates="extractions")
 
@@ -155,7 +170,9 @@ class BidClassification(Base):
     input_tokens: Mapped[int | None] = mapped_column(Integer)
     output_tokens: Mapped[int | None] = mapped_column(Integer)
     cost_inr: Mapped[Decimal | None] = mapped_column(Numeric(12, 4))
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
 
     bid: Mapped["Bid"] = relationship(back_populates="classifications")
 
@@ -176,14 +193,15 @@ class BidClassification(Base):
         self.decision_reason = value
 
 
-
 class BidReview(Base):
     __tablename__ = "bid_reviews"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     bid_id: Mapped[int] = mapped_column(ForeignKey("bids.id"), nullable=False)
     extraction_id: Mapped[int | None] = mapped_column(ForeignKey("bid_extractions.id"))
-    classification_id: Mapped[int | None] = mapped_column(ForeignKey("bid_classifications.id"))
+    classification_id: Mapped[int | None] = mapped_column(
+        ForeignKey("bid_classifications.id")
+    )
     review_decision: Mapped[str] = mapped_column(String(50), nullable=False)
     review_reason: Mapped[str | None] = mapped_column(Text)
     reviewer_name: Mapped[str | None] = mapped_column(String(100))
@@ -191,21 +209,66 @@ class BidReview(Base):
 
     bid: Mapped["Bid"] = relationship(back_populates="reviews")
 
+
 class CompanyProfile(Base):
     __tablename__ = "company_profiles"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    profile_version: Mapped[str] = mapped_column(String(50), unique=True, nullable=False,)
-    company_name: Mapped[str] = mapped_column(Text,nullable=False,)
-    services: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
-    industries: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
+    profile_version: Mapped[str] = mapped_column(
+        String(50),
+        unique=True,
+        nullable=False,
+    )
+    company_name: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+    services: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+    )
+    industries: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+    )
     min_project_value_inr: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     max_project_value_inr: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
     min_turnover_inr: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
-    certifications: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
-    excluded_keywords: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
-    preferred_keywords: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
-    geo_preferences: Mapped[list[str]] = mapped_column(JSONB,nullable=False,default=list,)
-    active: Mapped[bool] = mapped_column( Boolean,nullable=False,default=True,)
-    created_at: Mapped[datetime] = mapped_column(DateTime,nullable=False,server_default=func.now(),)
-    updated_at: Mapped[datetime] = mapped_column(DateTime,nullable=False,server_default=func.now(),onupdate=func.now(),)
+    certifications: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+    )
+    excluded_keywords: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+    )
+    preferred_keywords: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+    )
+    geo_preferences: Mapped[list[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+    )
+    active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )

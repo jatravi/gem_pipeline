@@ -58,7 +58,6 @@ def main() -> None:
         #     }
         # )
 
-
         # failed = doc_repo.mark_processing_failed(
         #     document_id=document.id,
         #     error_message="sample failure",
@@ -72,7 +71,7 @@ def main() -> None:
         #         "processing_error": failed.processing_error,
         #     }
         # )
-        
+
         db.commit()
 
         print(

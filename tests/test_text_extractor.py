@@ -3,6 +3,7 @@ Tests for the text extraction module (PdfTextExtractor and InvalidPDFError).
 
 Uses temporary files — no external services needed.
 """
+
 from __future__ import annotations
 
 import os

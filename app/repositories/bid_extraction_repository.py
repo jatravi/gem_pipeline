@@ -144,3 +144,15 @@ class BidExtractionRepository:
         self.db.flush()
 
         return True
+
+    def get_latest_extractions_for_classification(
+        self,
+        bid_ids: list[int] | None = None,
+    ) -> list[BidExtraction]:
+
+        query = self.db.query(BidExtraction).filter(BidExtraction.is_current == True)
+
+        if bid_ids:
+            query = query.filter(BidExtraction.bid_id.in_(bid_ids))
+
+        return query.all()

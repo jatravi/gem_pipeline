@@ -3,6 +3,7 @@ from sqlalchemy import text
 from app.db.session import engine, SessionLocal
 from app.db.models import Base, CompanyProfile
 
+
 def init_db() -> None:
     """
     Ensures that:
@@ -14,21 +15,31 @@ def init_db() -> None:
     with engine.connect() as conn:
         # Check if company_profiles table exists
         table_exists = conn.execute(
-            text("SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'company_profiles')")
+            text(
+                "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'company_profiles')"
+            )
         ).scalar()
-        
+
         if table_exists:
             # Check if id column exists
             id_exists = conn.execute(
-                text("SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema='public' AND table_name='company_profiles' AND column_name='id')")
+                text(
+                    "SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema='public' AND table_name='company_profiles' AND column_name='id')"
+                )
             ).scalar()
-            
+
             if not id_exists:
                 print("Adding missing 'id' column to company_profiles table...")
-                conn.execute(text("ALTER TABLE company_profiles ADD COLUMN id SERIAL PRIMARY KEY"))
+                conn.execute(
+                    text(
+                        "ALTER TABLE company_profiles ADD COLUMN id SERIAL PRIMARY KEY"
+                    )
+                )
                 # Drop dummy column if it exists and is no longer needed
                 dummy_exists = conn.execute(
-                    text("SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema='public' AND table_name='company_profiles' AND column_name='dummy')")
+                    text(
+                        "SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_schema='public' AND table_name='company_profiles' AND column_name='dummy')"
+                    )
                 ).scalar()
                 if dummy_exists:
                     conn.execute(text("ALTER TABLE company_profiles DROP COLUMN dummy"))
@@ -46,16 +57,31 @@ def init_db() -> None:
             default_profile = CompanyProfile(
                 profile_version="v1.0",
                 company_name="GeM Bidder Corp",
-                services=["Software Development", "IT Infrastructure", "Managed Services", "Email Apps", "Defender Licenses"],
+                services=[
+                    "Software Development",
+                    "IT Infrastructure",
+                    "Managed Services",
+                    "Email Apps",
+                    "Defender Licenses",
+                ],
                 industries=["IT", "e-Governance", "Cloud", "Technology"],
                 min_project_value_inr=Decimal("10000.00"),
                 max_project_value_inr=Decimal("100000000.00"),
                 min_turnover_inr=Decimal("500000.00"),
                 certifications=["ISO 9001", "ISO 27001"],
                 excluded_keywords=["construction", "civil", "plumbing", "mechanical"],
-                preferred_keywords=["software", "cloud", "ai", "email", "support", "managed", "defender", "microsoft"],
+                preferred_keywords=[
+                    "software",
+                    "cloud",
+                    "ai",
+                    "email",
+                    "support",
+                    "managed",
+                    "defender",
+                    "microsoft",
+                ],
                 geo_preferences=["India"],
-                active=True
+                active=True,
             )
             db.add(default_profile)
             db.commit()
@@ -66,6 +92,7 @@ def init_db() -> None:
         raise
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     init_db()

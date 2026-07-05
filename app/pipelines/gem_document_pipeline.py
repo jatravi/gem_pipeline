@@ -41,32 +41,23 @@ def run_document_download_pipeline(
                 continue
 
             try:
-                document_url = build_bid_document_url(
-                    bid.source_bid_id
-                )
+                document_url = build_bid_document_url(bid.source_bid_id)
 
-                destination = (
-                    Path("data")
-                    / "raw"
-                    / "gem"
-                    / f"{bid.source_bid_id}.pdf"
-                )
+                destination = Path("data") / "raw" / "gem" / f"{bid.source_bid_id}.pdf"
 
                 result = downloader.download_to_path(
                     url=document_url,
                     destination=destination,
                 )
 
-                document, created = (
-                    document_repository.upsert_downloaded_document(
-                        bid_id=bid.id,
-                        file_name=destination.name,
-                        document_url=result.url,
-                        local_path=result.local_path,
-                        file_size=result.file_size,
-                        content_hash=result.content_hash,
-                        mime_type=result.mime_type,
-                    )
+                document, created = document_repository.upsert_downloaded_document(
+                    bid_id=bid.id,
+                    file_name=destination.name,
+                    document_url=result.url,
+                    local_path=result.local_path,
+                    file_size=result.file_size,
+                    content_hash=result.content_hash,
+                    mime_type=result.mime_type,
                 )
 
                 downloaded_documents.append(document)
@@ -128,13 +119,9 @@ def run_document_text_extraction_pipeline(
 
                 extraction = extractor.extract(pdf_path)
 
-                cleaned_text = clean_document_text(
-                    extraction.raw_text
-                )
+                cleaned_text = clean_document_text(extraction.raw_text)
 
-                text_hash = compute_text_hash(
-                    cleaned_text
-                )
+                text_hash = compute_text_hash(cleaned_text)
 
                 updated = repository.update_text_processing(
                     document_id=document.id,
