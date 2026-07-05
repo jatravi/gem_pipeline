@@ -10,7 +10,7 @@ from __future__ import annotations
 from decimal import Decimal
 from unittest.mock import MagicMock
 
-from app.llm.client import FakeLLMExtractor, SafeLLMExtractor, get_llm_extractor
+from app.llm.client import FakeLLMExtractor, SafeLLMExtractor
 from app.llm.schemas import TenderLLMExtractionResult
 
 

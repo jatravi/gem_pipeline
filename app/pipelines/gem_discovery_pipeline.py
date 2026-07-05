@@ -1,5 +1,4 @@
 from __future__ import annotations
-from decimal import Decimal
 
 from app.config import settings
 from app.db.init_db import init_db

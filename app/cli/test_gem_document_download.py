@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from app.pipelines.gem_document_pipeline import (
     run_document_download_pipeline,
 )

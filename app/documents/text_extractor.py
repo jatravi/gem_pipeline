@@ -37,7 +37,7 @@ class PdfTextExtractor:
                 header = f.read(5)
                 if header != b"%PDF-":
                     raise InvalidPDFError("invalid_pdf_signature")
-        except OSError as e:
+        except OSError:
             # Handle standard OS errors reading file as missing_file
             raise InvalidPDFError("missing_file")
 

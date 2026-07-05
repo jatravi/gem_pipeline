@@ -150,7 +150,7 @@ class BidExtractionRepository:
         bid_ids: list[int] | None = None,
     ) -> list[BidExtraction]:
 
-        query = self.db.query(BidExtraction).filter(BidExtraction.is_current == True)
+        query = self.db.query(BidExtraction).filter(BidExtraction.is_current.is_(True))
 
         if bid_ids:
             query = query.filter(BidExtraction.bid_id.in_(bid_ids))
