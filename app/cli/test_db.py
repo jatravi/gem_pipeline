@@ -5,7 +5,9 @@ from app.db.session import engine
 
 def main() -> None:
     with engine.connect() as conn:
-        row = conn.execute(text("SELECT current_database(), current_user, now()")).fetchone()
+        row = conn.execute(
+            text("SELECT current_database(), current_user, now()")
+        ).fetchone()
         print("Connected:", row)
 
 

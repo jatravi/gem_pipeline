@@ -36,9 +36,7 @@ def run_keyword_prefilter_pipeline(
     try:
         bid_repository = BidRepository(db)
 
-        bids = bid_repository.get_recent_bids(
-            limit=limit,
-        )
+        bids = bid_repository.get_recent_bids(limit=limit)
 
         results: list[FilteredBidResult] = []
 
@@ -53,31 +51,30 @@ def run_keyword_prefilter_pipeline(
                 ),
             )
 
-            filtered = FilteredBidResult(
-                bid_id=bid.id,
-                bid_number=bid.bid_number or "",
-                title=bid.title,
-                is_relevant=result.is_relevant,
-                score=result.score,
-                include_matches=result.include_matches,
-                exclude_matches=result.exclude_matches,
-                reason=result.reason,
+            results.append(
+                FilteredBidResult(
+                    bid_id=bid.id,
+                    bid_number=bid.bid_number or "",
+                    title=bid.title,
+                    is_relevant=result.is_relevant,
+                    score=result.score,
+                    include_matches=result.include_matches,
+                    exclude_matches=result.exclude_matches,
+                    reason=result.reason,
+                )
             )
 
-            results.append(filtered)
+        candidates = [row for row in results if row.is_relevant]
 
-        for row in results:
-            print(asdict(row))
-
-        candidates = [
-            row
-            for row in results
-            if row.is_relevant
-        ]
-
-        print()
         print(f"Scanned  : {len(results)} bids")
         print(f"Relevant : {len(candidates)} bids")
+
+        if candidates:
+            print("\nRelevant Bids")
+            print("-" * 70)
+
+            for row in candidates:
+                print(asdict(row))
 
         return candidates
 

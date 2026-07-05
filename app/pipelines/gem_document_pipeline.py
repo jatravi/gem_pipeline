@@ -6,7 +6,7 @@ from app.db.models import BidDocument
 from app.db.session import SessionLocal
 from app.documents.downloader import FileDownloader
 from app.documents.text_cleaner import clean_document_text
-from app.documents.text_extractor import PdfTextExtractor
+from app.documents.text_extractor import PdfTextExtractor, InvalidPDFError
 from app.documents.text_hashing import compute_text_hash
 from app.pipelines.gem_filter_pipeline import FilteredBidResult
 from app.repositories.bid_document_repository import BidDocumentRepository
@@ -41,32 +41,23 @@ def run_document_download_pipeline(
                 continue
 
             try:
-                document_url = build_bid_document_url(
-                    bid.source_bid_id
-                )
+                document_url = build_bid_document_url(bid.source_bid_id)
 
-                destination = (
-                    Path("data")
-                    / "raw"
-                    / "gem"
-                    / f"{bid.source_bid_id}.pdf"
-                )
+                destination = Path("data") / "raw" / "gem" / f"{bid.source_bid_id}.pdf"
 
                 result = downloader.download_to_path(
                     url=document_url,
                     destination=destination,
                 )
 
-                document, created = (
-                    document_repository.upsert_downloaded_document(
-                        bid_id=bid.id,
-                        file_name=destination.name,
-                        document_url=result.url,
-                        local_path=result.local_path,
-                        file_size=result.file_size,
-                        content_hash=result.content_hash,
-                        mime_type=result.mime_type,
-                    )
+                document, created = document_repository.upsert_downloaded_document(
+                    bid_id=bid.id,
+                    file_name=destination.name,
+                    document_url=result.url,
+                    local_path=result.local_path,
+                    file_size=result.file_size,
+                    content_hash=result.content_hash,
+                    mime_type=result.mime_type,
                 )
 
                 downloaded_documents.append(document)
@@ -122,24 +113,15 @@ def run_document_text_extraction_pipeline(
             try:
 
                 if not document.local_path:
-                    raise RuntimeError(
-                        f"Document {document.id} has no local_path."
-                    )
+                    raise InvalidPDFError("missing_file")
 
                 pdf_path = Path(document.local_path)
 
-                if not pdf_path.exists():
-                    raise FileNotFoundError(pdf_path)
-
                 extraction = extractor.extract(pdf_path)
 
-                cleaned_text = clean_document_text(
-                    extraction.raw_text
-                )
+                cleaned_text = clean_document_text(extraction.raw_text)
 
-                text_hash = compute_text_hash(
-                    cleaned_text
-                )
+                text_hash = compute_text_hash(cleaned_text)
 
                 updated = repository.update_text_processing(
                     document_id=document.id,
@@ -162,18 +144,43 @@ def run_document_text_extraction_pipeline(
                     }
                 )
 
-            except Exception as exc:
-
+            except InvalidPDFError as exc:
                 repository.mark_processing_failed(
                     document_id=document.id,
-                    error_message=str(exc),
+                    error_message=exc.reason_code,
                 )
-
                 print(
                     {
                         "document_id": document.id,
                         "status": "failed",
-                        "error": str(exc),
+                        "error_code": exc.reason_code,
+                    }
+                )
+
+            except FileNotFoundError:
+                repository.mark_processing_failed(
+                    document_id=document.id,
+                    error_message="missing_file",
+                )
+                print(
+                    {
+                        "document_id": document.id,
+                        "status": "failed",
+                        "error_code": "missing_file",
+                    }
+                )
+
+            except Exception as exc:
+                repository.mark_processing_failed(
+                    document_id=document.id,
+                    error_message="invalid_pdf_signature",
+                )
+                print(
+                    {
+                        "document_id": document.id,
+                        "status": "failed",
+                        "error_code": "invalid_pdf_signature",
+                        "error_details": str(exc),
                     }
                 )
 

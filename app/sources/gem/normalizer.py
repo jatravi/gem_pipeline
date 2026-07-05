@@ -35,4 +35,6 @@ class GeMBidNormalizer:
             1: "active",
             0: "inactive",
         }
-        return mapping.get(status_code, str(status_code) if status_code is not None else None)
+        return mapping.get(
+            status_code, str(status_code) if status_code is not None else None
+        )

@@ -1,14 +1,29 @@
+# Environment
 .env
+.env.*
+!.env.example
 
-# Python cache
+# Virtual Environment
+.venv/
+
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
 
-# Optional
+# Testing & Linting
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 
-__pycache__/
-*.py[cod]
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Downloaded Tender Data
+data/raw/
+
+# Airflow Logs
+airflow/logs/

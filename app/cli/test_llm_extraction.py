@@ -1,8 +1,8 @@
-from app.pipelines.gem_discovery_pipeline import run_gem_discovery_pipeline
+from app.pipelines.gem_discovery_pipeline import run_gem_pipeline
 
 
 def main() -> None:
-    run_gem_discovery_pipeline(limit=20)
+    run_gem_pipeline(limit=20)
 
 
 if __name__ == "__main__":

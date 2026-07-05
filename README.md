@@ -1,415 +1,595 @@
-# GeM Tender Discovery Pipeline
+# GeM Tender Discovery & Extraction Pipeline
 
-An end-to-end pipeline for discovering public tenders from the Government e-Marketplace (GeM), filtering them through multiple low-cost stages, downloading bid documents, extracting document text, and preparing only qualified tenders for downstream LLM-based extraction and classification.
+A production-oriented, cost-optimized procurement intelligence pipeline for discovering, processing, extracting, and classifying Government e-Marketplace (GeM) tenders using deterministic filtering and pluggable LLM providers.
 
----
+> **Core Principle:** *Spend tokens last, not first.*
 
-# Overview
-
-The project is built as a staged pipeline that minimizes unnecessary processing by progressively filtering bids before expensive AI operations.
-
-Current pipeline:
-
-```
-Discover Bids
-      ↓
-Persist Bid Metadata
-      ↓
-Keyword Prefilter
-      ↓
-Candidate Selection
-      ↓
-Document Download
-      ↓
-Document Persistence
-      ↓
-PDF Text Extraction
-      ↓
-Text Cleaning
-      ↓
-Content Hash Gate
-      ↓
-LLM Candidates
-      ↓
-(Next)
-LLM Extraction
-      ↓
-Bid Classification
-      ↓
-Review Workflow
-```
-
----
-
-# Current Capabilities
-
-## Discovery
-
-* Discover GeM tenders
-* Parse bid metadata
-* Persist bids into PostgreSQL
-* Track discovery events
-* Track pipeline runs
-
----
-
-## Persistence
-
-Persists data into:
-
-* bids
-* pipeline_runs
-* bid_events
-
----
-
-## Keyword Prefilter
-
-Config-driven keyword filtering.
-
-Supports:
-
-* include keywords
-* exclude keywords
-* keyword scoring
-* candidate selection
-
-Configuration files:
-
-```
-configs/
-    keyword_include.txt
-    keyword_exclude.txt
-```
-
-Only relevant bids continue through the pipeline.
-
----
-
-## Document Processing
-
-Uses GeM source identifiers to:
-
-* build document URLs
-* download PDFs
-* persist document metadata
-* update existing documents
-* compute content hashes
-
-Documents are stored in:
-
-```
-bid_documents
-```
-
----
-
-## PDF Processing
-
-Uses pdfplumber to:
-
-* extract raw text
-* clean extracted text
-* compute SHA-256 text hash
-* persist processed document data
-
-Stored fields include:
-
-* raw_text
-* cleaned_text
-* text_hash
-* page_count
-* extraction_method
-* processing_status
-
----
-
-## Content Hash Gate
-
-Prevents unnecessary downstream LLM work.
-
-Compares:
-
-* previous processed hash
-* current processed hash
-
-If unchanged:
-
-```
-Skip LLM
-```
-
-Otherwise:
-
-```
-Proceed to LLM extraction
-```
-
----
-
-# Current Pipeline
-
-```
-GeM Listing
-      │
-      ▼
-Discovery
-      │
-      ▼
-Bid Persistence
-      │
-      ▼
-Keyword Prefilter
-      │
-      ▼
-Relevant Candidates
-      │
-      ▼
-Document Download
-      │
-      ▼
-Downloaded Documents
-      │
-      ▼
-Text Extraction
-      │
-      ▼
-Processed Documents
-      │
-      ▼
-Content Hash Gate
-      │
-      ▼
-LLM Candidates
-```
+The pipeline progressively filters tenders using deterministic logic before invoking an LLM, minimizing API cost while maintaining high-quality structured extraction.
 
 ---
 
 # Project Status
 
-## Completed
+**Current Phase:** MVP V1 (≈90% Complete)
 
-### Discovery
+### ✅ Completed
 
-* GeM listing parser
-* Bid persistence
-* Pipeline runs
-* Bid events
-
-### Filtering
-
-* Config-driven keyword prefilter
-* Candidate selection
-
-### Documents
-
-* Direct GeM document download
-* Document persistence
-* Document upsert
-* PDF text extraction
-* Text cleaning
-* SHA-256 hashing
-
-### Pipeline
-
-* End-to-end discovery pipeline
-* Stage-wise orchestration
-* Candidate propagation between stages
-
----
-
-## Next Stage
-
+* GeM Tender Discovery
+* PostgreSQL Data Model
+* Bid Persistence
+* Keyword Prefilter
+* Document Download
+* PDF Text Extraction
+* Content Cleaning
+* Content Hash Gate
 * LLM Extraction Pipeline
-* bid_extractions persistence
+* Multi-provider LLM Support
+* Automatic LLM Fallback
+* Bid Classification
+* Company Profile Matching
+* Pipeline Metrics & Cost Accounting
+* Airflow-ready Pipeline Entrypoint
+
+### 🚧 In Progress
+
+* Google Gemini Flash Integration
+* Slack Digest
+* Human Review Workflow
+* Airflow Production Scheduling
+* Prompt Tuning
+* Keyword Optimization
 
 ---
 
-## Planned
-
-* Bid classification
-* Human review workflow
-* Retry policies
-* Better document versioning
-* Airflow production orchestration
-
----
-
-# Repository Structure
+# Architecture
 
 ```
-app/
-│
-├── cli/
-├── db/
-├── documents/
-├── filters/
-├── pipelines/
-├── repositories/
-├── schemas/
-├── services/
-└── sources/
-    └── gem/
+                        GeM Tender Discovery Pipeline
 
-configs/
-
-data/
-    raw/
+                     ┌──────────────────────────────┐
+                     │      GeM Listing API         │
+                     └──────────────┬───────────────┘
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │      1. Bid Discovery        │
+                     └──────────────┬───────────────┘
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │   2. Keyword Prefilter       │
+                     └──────────────┬───────────────┘
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │   3. Document Download       │
+                     └──────────────┬───────────────┘
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │    4. Text Extraction        │
+                     └──────────────┬───────────────┘
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │    5. Content Hash Gate      │
+                     └──────────────┬───────────────┘
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │    6. LLM Extraction         │
+                     │                              │
+                     │  • Ollama                   │
+                     │  • OpenAI                   │
+                     │  • Gemini Flash (Planned)   │
+                     │  • Fake Provider            │
+                     └──────────────┬───────────────┘
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │    7. Bid Classification     │
+                     └──────────────┬───────────────┘
+                                    │
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │ Review Queue / Slack Digest  │
+                     │      (Planned)               │
+                     └──────────────────────────────┘
 ```
 
 ---
 
-# Core Database Tables
+# Features
 
-* bids
-* pipeline_runs
-* bid_events
-* bid_documents
-* bid_extractions
-* bid_classifications
-* bid_reviews
+* End-to-end GeM tender discovery pipeline
+* Cost-first LLM architecture
+* PostgreSQL persistence
+* Repository-Service architecture
+* Versioned LLM extractions
+* Versioned company profiles
+* Deterministic keyword filtering
+* Content hash-based deduplication
+* PDF download and text extraction
+* Automatic LLM fallback
+* Multi-provider LLM abstraction
+* Token accounting
+* Cost accounting
+* Airflow-ready orchestration
+* Structured pipeline metrics
 
 ---
 
-# Technology Stack
+# Quick Start
 
-* Python
-* PostgreSQL
-* SQLAlchemy
-* Requests
-* pdfplumber
+## Prerequisites
 
-Future:
+* Python 3.11+
+* PostgreSQL 15+
+* Git
 
-* OpenAI / OpenRouter
-* LangChain (optional)
-* Apache Airflow
+Optional
+
+* Ollama
+* OpenAI API Key
+* Google Gemini API Key
+
+---
+
+## Installation
+
+```bash
+git clone <repository-url>
+
+cd gem_pipeline
+
+python -m venv .venv
+
+# Windows
+.venv\Scripts\activate
+
+# Linux/macOS
+source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+---
+
+## Environment Configuration
+
+Copy the template
+
+```bash
+copy .env.example .env
+```
+
+or
+
+```bash
+cp .env.example .env
+```
+
+Supported providers
+
+```
+fake
+openai
+ollama
+gemini
+```
+
+---
+
+## Database
+
+Create database
+
+```bash
+createdb gem_pipeline
+```
+
+Initialize schema
+
+```bash
+python -m app.db.init_db
+```
 
 ---
 
 # Running the Pipeline
 
-Run the complete pipeline:
+Run complete pipeline
 
 ```bash
 python -m app.cli.test_gem_pipeline
 ```
 
-Pipeline stages:
+Run with custom limit
 
-1. Discover bids
-2. Keyword prefilter
-3. Candidate selection
-4. Document download
-5. Text extraction
-6. Content hash gate
-
-Example output:
-
-```
-20 bids scanned
-↓
-1 relevant candidate
-↓
-1 document downloaded
-↓
-1 document processed
-↓
-1 LLM candidate
+```bash
+python -m app.cli.test_gem_pipeline 50
 ```
 
 ---
 
-# Individual Test CLIs
+# Pipeline Stages
 
-Discovery
+## Stage 1 — Bid Discovery
 
-```bash
-python -m app.cli.test_gem_discovery
+* Fetches latest GeM listings
+* Parses listing metadata
+* Stores bids in PostgreSQL
+* Records pipeline events
+
+---
+
+## Stage 2 — Keyword Prefilter
+
+Uses deterministic include/exclude keyword scoring.
+
+```
+Score = Include Matches − (2 × Exclude Matches)
 ```
 
-Keyword Pipeline
+Only bids with positive scores proceed.
 
-```bash
-python -m app.cli.test_keyword_prefilter_pipeline
+---
+
+## Stage 3 — Document Download
+
+* Builds GeM document URLs
+* Downloads PDFs
+* Computes SHA256 content hash
+* Stores metadata
+
+---
+
+## Stage 4 — Text Extraction
+
+Uses
+
+* pdfplumber
+* pdfminer
+* pypdf
+
+Features
+
+* PDF validation
+* Signature validation
+* Empty file detection
+* Text cleaning
+* SHA256 text hash
+
+---
+
+## Stage 5 — Content Hash Gate
+
+Skips LLM calls when document text has not changed.
+
+Benefits
+
+* Avoids duplicate processing
+* Reduces LLM cost
+* Detects corrigenda
+
+---
+
+## Stage 6 — LLM Extraction
+
+Supported providers
+
+| Provider     | Status     |
+| ------------ | ---------- |
+| Fake         | ✅          |
+| Ollama       | ✅          |
+| OpenAI       | ✅          |
+| Gemini Flash | 🚧 Planned |
+
+Features
+
+* Structured JSON extraction
+* Automatic fallback
+* Token accounting
+* Cost accounting
+* Prompt versioning
+
+---
+
+## Stage 7 — Bid Classification
+
+Scores extracted tenders against
+
+* preferred keywords
+* excluded keywords
+* company profile
+
+Stores
+
+* confidence
+* relevance
+* decision reason
+
+---
+
+# Database Schema
+
 ```
+bids
+│
+├── bid_documents
+│
+├── bid_extractions
+│      │
+│      └── bid_classifications
+│
+├── bid_events
+│
+└── bid_reviews
 
-Document Download
+company_profiles
 
-```bash
-python -m app.cli.test_gem_document_download
-```
-
-Document Processing
-
-```bash
-python -m app.cli.test_gem_document_text_processing
-```
-
-Content Hash Gate
-
-```bash
-python -m app.cli.test_content_hash_gate
-```
-
-Complete Pipeline
-
-```bash
-python -m app.cli.test_gem_pipeline
+pipeline_runs
 ```
 
 ---
 
-# Development Philosophy
+# Database Tables
 
-The project follows a staged pipeline architecture.
+| Table               | Purpose                |
+| ------------------- | ---------------------- |
+| bids                | Tender metadata        |
+| bid_documents       | Downloaded documents   |
+| bid_events          | Audit trail            |
+| bid_extractions     | Structured LLM output  |
+| bid_classifications | Relevance scoring      |
+| bid_reviews         | Human review           |
+| company_profiles    | Company capabilities   |
+| pipeline_runs       | Pipeline observability |
 
-Each stage:
+---
 
-* has a single responsibility
-* persists intermediate artifacts
-* returns outputs to the next stage
-* minimizes downstream cost
-* remains independently testable
+# LLM Providers
 
-The goal is to ensure only high-value candidate tenders reach the LLM extraction stage.
+| Provider     | Purpose                     |
+| ------------ | --------------------------- |
+| Fake         | Integration testing         |
+| Ollama       | Local inference             |
+| OpenAI       | Cloud inference             |
+| Gemini Flash | Planned production provider |
+
+Provider selection
+
+```
+LLM_PROVIDER=fake
+
+LLM_PROVIDER=openai
+
+LLM_PROVIDER=ollama
+
+LLM_PROVIDER=gemini
+```
+
+---
+
+# Technology Stack
+
+### Backend
+
+* Python 3.11
+* PostgreSQL
+* SQLAlchemy 2.x
+
+### LLM
+
+* LangChain
+* Ollama
+* OpenAI
+* Google Gemini Flash (planned)
+
+### Document Processing
+
+* pdfplumber
+* pdfminer
+* pypdf
+
+### Infrastructure
+
+* Apache Airflow
+* PostgreSQL
+* LocalExecutor
+
+### Testing
+
+* Pytest
+* Ruff
+* Black
+* MyPy
+
+---
+
+# Project Structure
+
+```
+gem_pipeline/
+
+├── airflow/
+│   └── dags/
+
+├── app/
+│   ├── cli/
+│   ├── config.py
+│   ├── db/
+│   ├── documents/
+│   ├── filters/
+│   ├── llm/
+│   ├── pipelines/
+│   ├── repositories/
+│   ├── services/
+│   └── sources/
+
+├── configs/
+
+├── data/
+│   └── raw/
+│       └── gem/
+
+├── requirements/
+
+├── scripts/
+
+├── tests/
+
+├── .env.example
+
+├── requirements.txt
+
+└── README.md
+```
+
+---
+
+# Airflow
+
+The DAG invokes a **single canonical pipeline entrypoint**
+
+```
+run_gem_pipeline()
+```
+
+No duplicate orchestration logic exists.
+
+---
+
+# CLI Commands
+
+| Command                                             | Description       |
+| --------------------------------------------------- | ----------------- |
+| python -m app.cli.test_gem_pipeline                 | Complete pipeline |
+| python -m app.cli.test_gem_discovery                | Discovery         |
+| python -m app.cli.test_keyword_prefilter            | Keyword filtering |
+| python -m app.cli.test_gem_document_download        | Document download |
+| python -m app.cli.test_gem_document_text_processing | Text extraction   |
+| python -m app.cli.test_content_hash_gate            | Content hash gate |
+| python -m app.cli.test_llm_extraction               | LLM extraction    |
+| python -m app.cli.test_post_classification          | Classification    |
+
+---
+
+# Example Pipeline Summary
+
+```python
+{
+    "bids_scanned": 20,
+    "bids_relevant": 3,
+    "documents_downloaded": 3,
+    "documents_processed": 2,
+    "documents_failed_text_extraction": 1,
+    "llm_candidates": 2,
+    "llm_success": 2,
+    "llm_failed": 0,
+    "llm_fallback_used": 0,
+    "llm_estimated_cost_inr": Decimal("0.0024"),
+    "run_status": "success"
+}
+```
+
+---
+
+# Troubleshooting
+
+### Ollama unavailable
+
+```
+RuntimeError:
+Ollama server is not running
+```
+
+Start
+
+```bash
+ollama serve
+```
+
+---
+
+### Model missing
+
+```
+ValueError:
+Configured model not found
+```
+
+Pull model
+
+```bash
+ollama pull qwen3:4b
+```
+
+---
+
+### Database
+
+```bash
+psql -U postgres -d gem_pipeline
+```
+
+---
+
+### Seed Company Profile
+
+```bash
+python -m app.db.init_db
+```
 
 ---
 
 # Roadmap
 
-## Stage 1 ✅
+## MVP V1
 
-* Discovery
-* Persistence
-* Events
-
-## Stage 2 ✅
-
-* Keyword filtering
-* Candidate selection
-
-## Stage 3 ✅
-
-* Document download
-* PDF processing
-* Content hash gate
-
-## Stage 4 (Next)
-
-* LLM extraction
-* bid_extractions
-
-## Stage 5
-
-* Bid classification
-* bid_classifications
-
-## Stage 6
-
-* Human review
-* bid_reviews
+* ✅ Discovery
+* ✅ Persistence
+* ✅ Keyword Filtering
+* ✅ Document Download
+* ✅ PDF Processing
+* ✅ Content Hash Gate
+* ✅ LLM Extraction
+* ✅ Bid Classification
+* 🚧 Google Gemini Flash
+* 🚧 Slack Digest
+* 🚧 Human Review Workflow
 
 ---
 
+## MVP V2
 
+* FastAPI Review UI
+* CPPP Adapter
+* OCR Support
+* Bid Response Drafting
+* Semantic Search
+* Reviewer Feedback Learning
+* Multi-source Procurement Discovery
+
+---
+
+# Current Progress
+
+| Area                | Status |
+| ------------------- | ------ |
+| Discovery Pipeline  | ✅      |
+| Document Processing | ✅      |
+| LLM Integration     | ✅      |
+| Cost Optimization   | ✅      |
+| Classification      | ✅      |
+| Airflow Integration | 🚧     |
+| Gemini Flash        | 🚧     |
+| Human Review        | 🚧     |
+
+**Overall MVP V1 Completion:** **~90%**
+
+---
+
+# License
+
+This project is currently being developed as part of a Government Procurement Automation initiative focused on intelligent tender discovery, extraction, and bid qualification.

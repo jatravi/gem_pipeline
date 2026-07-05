@@ -19,9 +19,7 @@ def main() -> None:
 
     downloaded_documents = run_document_download_pipeline(candidates)
 
-    processed_documents = run_document_text_extraction_pipeline(
-        downloaded_documents
-    )
+    processed_documents = run_document_text_extraction_pipeline(downloaded_documents)
 
     run_content_hash_gate_pipeline(processed_documents)
 

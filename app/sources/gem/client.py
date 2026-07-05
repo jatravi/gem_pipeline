@@ -23,7 +23,9 @@ class GeMClient:
 
         csrf_token = self.session.cookies.get("csrf_gem_cookie")
         if not csrf_token:
-            raise RuntimeError("Could not find csrf_gem_cookie after loading listing page")
+            raise RuntimeError(
+                "Could not find csrf_gem_cookie after loading listing page"
+            )
 
         return csrf_token
 

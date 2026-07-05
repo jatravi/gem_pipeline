@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from pydantic import BaseModel, Field
 
 
@@ -15,3 +16,18 @@ class TenderLLMExtraction(BaseModel):
     contact_details: str | None = Field(default=None)
     source_summary: str | None = Field(default=None)
     confidence_notes: str | None = Field(default=None)
+
+
+class LLMUsageMetadata(BaseModel):
+    model: str
+    provider: str
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    total_tokens: int | None = None
+    cost_inr: Decimal | None = None
+    fallback_used: bool = False
+
+
+class TenderLLMExtractionResult(BaseModel):
+    extraction: TenderLLMExtraction
+    usage: LLMUsageMetadata

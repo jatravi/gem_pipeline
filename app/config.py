@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from decimal import Decimal
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -24,6 +25,17 @@ class Settings(BaseSettings):
 
     DATA_DIR: str = "data"
     RAW_GEM_DIR: str = "data/raw/gem"
+
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "qwen3:4b"
+
+    LLM_PROVIDER: str = "fake"
+    LLM_API_KEY: str | None = None
+    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_MAX_INPUT_CHARS: int = 15000
+    LLM_FALLBACK_TO_FAKE_ON_ERROR: bool = True
+    LLM_INPUT_COST_PER_1K_TOKENS_INR: Decimal = Decimal("0")
+    LLM_OUTPUT_COST_PER_1K_TOKENS_INR: Decimal = Decimal("0")
 
     @computed_field
     @property

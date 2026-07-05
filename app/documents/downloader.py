@@ -18,7 +18,9 @@ class DownloadResult:
 
 
 class FileDownloader:
-    def __init__(self, session: requests.Session | None = None, timeout: int = 60) -> None:
+    def __init__(
+        self, session: requests.Session | None = None, timeout: int = 60
+    ) -> None:
         self.session = session or requests.Session()
         self.timeout = timeout
 
