@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "gem_pipeline"
     POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_PASSWORD: str = ""
 
     DATA_DIR: str = "data"
     RAW_GEM_DIR: str = "data/raw/gem"
