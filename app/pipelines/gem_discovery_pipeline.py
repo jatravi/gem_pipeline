@@ -14,8 +14,7 @@ from app.pipelines.gem_llm_pipeline import run_llm_extraction_pipeline
 from app.pipelines.post_classification_pipeline import (
     run_bid_classification_post_activity,
 )
-from app.llm.client import check_ollama_health
-
+from app.llm.client import check_llm_health
 
 def run_gem_pipeline(limit: int = 20) -> dict:
     """
@@ -27,10 +26,9 @@ def run_gem_pipeline(limit: int = 20) -> dict:
     init_db()
 
     # 2. Ollama health check if Ollama is selected
-    if settings.LLM_PROVIDER.strip().lower() == "ollama":
-        print("Performing Ollama health check...")
-        check_ollama_health()
-        print("Ollama health check passed.")
+    print(f"Performing {settings.LLM_PROVIDER} health check...")
+    check_llm_health()
+    print("LLM health check passed.")
 
     print("=" * 70)
     print("STAGE 1 : Bid Discovery")

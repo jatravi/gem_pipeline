@@ -8,6 +8,8 @@ import requests
 
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+from sqlalchemy import text
 
 from app.config import settings
 from app.llm.schemas import (
@@ -29,37 +31,83 @@ def _load_system_prompt() -> str:
     return "Extract structured tender details. Return null for missing fields."
 
 
-def check_ollama_health() -> None:
+def check_llm_health() -> None:
     """
-    Checks if the Ollama server is running and the configured model is pulled.
-    Raises RuntimeError or ValueError if not healthy.
+    Validate the configured LLM provider before pipeline execution.
     """
-    base_url = settings.OLLAMA_BASE_URL.rstrip("/")
-    try:
-        response = requests.get(f"{base_url}/api/tags", timeout=5)
-        response.raise_for_status()
-        data = response.json()
-    except requests.exceptions.RequestException as e:
-        raise RuntimeError(
-            f"Ollama server is not running or unreachable at {settings.OLLAMA_BASE_URL}. "
-            f"Please ensure Ollama is started. Error: {e}"
+
+    provider = settings.LLM_PROVIDER.strip().lower()
+
+    if provider == "fake":
+        return
+
+    if provider == "ollama":
+        base_url = settings.OLLAMA_BASE_URL.rstrip("/")
+
+        try:
+            response = requests.get(f"{base_url}/api/tags", timeout=5)
+            response.raise_for_status()
+            data = response.json()
+
+        except requests.exceptions.RequestException as exc:
+            raise RuntimeError(
+                f"Unable to connect to Ollama at {base_url}.\n"
+                "Make sure the Ollama server is running."
+            ) from exc
+
+        models = [m["name"] for m in data.get("models", [])]
+        configured_model = settings.OLLAMA_MODEL
+
+        found = any(
+            m == configured_model
+            or m.split(":")[0] == configured_model.split(":")[0]
+            for m in models
         )
 
-    models = [m["name"] for m in data.get("models", [])]
-    configured_model = settings.OLLAMA_MODEL
+        if not found:
+            raise RuntimeError(
+                f"Ollama model '{configured_model}' is not installed.\n"
+                f"Installed models: {models}\n"
+                f"Run:\n\nollama pull {configured_model}"
+            )
 
-    # Check if the configured model exists (allowing suffix matching like :latest)
-    found = False
-    for m in models:
-        if m == configured_model or m.split(":")[0] == configured_model.split(":")[0]:
-            found = True
-            break
+        return
 
-    if not found:
-        raise ValueError(
-            f"Configured Ollama model '{configured_model}' is not pulled. "
-            f"Available models in Ollama: {models}. Please run: ollama pull {configured_model}"
-        )
+    if provider == "openai":
+        if not settings.LLM_API_KEY:
+            raise RuntimeError("LLM_API_KEY is missing.")
+
+        try:
+            ChatOpenAI(
+                model=settings.LLM_MODEL,
+                api_key=settings.LLM_API_KEY,
+                temperature=0,
+            ).invoke("ping")
+        except Exception as exc:
+            raise RuntimeError(
+                f"Unable to connect to OpenAI using model '{settings.LLM_MODEL}'."
+            ) from exc
+
+        return
+
+    if provider == "gemini":
+        if not settings.GEMINI_API_KEY:
+            raise RuntimeError("GEMINI_API_KEY is missing.")
+
+        try:
+            ChatGoogleGenerativeAI(
+                model=settings.GEMINI_MODEL,
+                google_api_key=settings.GEMINI_API_KEY,
+                temperature=0,
+            ).invoke("ping")
+        except Exception as exc:
+            raise RuntimeError(
+                f"Unable to connect to Gemini using model '{settings.GEMINI_MODEL}'."
+            ) from exc
+
+        return
+
+    raise ValueError(f"Unsupported LLM provider: {provider}")
 
 
 class FakeLLMExtractor:
@@ -90,7 +138,7 @@ class FakeLLMExtractor:
 
 class OllamaLLMExtractor:
     def __init__(self) -> None:
-        check_ollama_health()
+        check_llm_health()
 
         self.system_prompt = _load_system_prompt()
         self.model = settings.OLLAMA_MODEL
@@ -272,3 +320,85 @@ def get_llm_extractor() -> BaseLLMExtractor:
         return primary
 
     raise ValueError(f"Unsupported LLM provider: {settings.LLM_PROVIDER}")
+
+class GeminiLLMExtractor:
+    def __init__(self) -> None:
+        self.system_prompt = _load_system_prompt()
+        self.model = settings.GEMINI_MODEL
+        self.max_input_chars = settings.LLM_MAX_INPUT_CHARS
+
+        self.llm = ChatGoogleGenerativeAI(
+            model=self.model,
+            google_api_key=settings.GEMINI_API_KEY,
+            temperature=0,
+        )
+
+        self.structured_llm = self.llm.with_structured_output(
+            TenderLLMExtraction,
+            include_raw=True,
+        )
+
+    def extract_tender_details(
+        self,
+        text: str,
+    ) -> TenderLLMExtractionResult:
+
+        trimmed = (text or "").strip()[: self.max_input_chars]
+
+        if not trimmed:
+            raise ValueError("Cannot run LLM extraction on empty text.")
+
+        result = self.structured_llm.invoke(
+            [
+                ("system", self.system_prompt),
+                ("human", f"Extract structured tender data from:\n\n{trimmed}"),
+            ]
+        )
+
+        extraction = result.get("parsed")
+        raw_msg = result.get("raw")
+
+        input_tokens = None
+        output_tokens = None
+        total_tokens = None
+
+        if raw_msg and hasattr(raw_msg, "usage_metadata"):
+            usage = raw_msg.usage_metadata or {}
+
+            input_tokens = usage.get("input_tokens")
+            output_tokens = usage.get("output_tokens")
+            total_tokens = usage.get("total_tokens")
+
+        elif raw_msg and hasattr(raw_msg, "response_metadata"):
+            usage = raw_msg.response_metadata.get("usage_metadata", {})
+
+            input_tokens = usage.get("input_tokens")
+            output_tokens = usage.get("output_tokens")
+            total_tokens = usage.get("total_tokens")
+
+        input_cost = Decimal("0")
+        output_cost = Decimal("0")
+
+        if input_tokens:
+            input_cost = (
+                Decimal(input_tokens) / Decimal("1000")
+            ) * settings.LLM_INPUT_COST_PER_1K_TOKENS_INR
+
+        if output_tokens:
+            output_cost = (
+                Decimal(output_tokens) / Decimal("1000")
+            ) * settings.LLM_OUTPUT_COST_PER_1K_TOKENS_INR
+
+        usage = LLMUsageMetadata(
+            model=self.model,
+            provider="gemini",
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=total_tokens,
+            cost_inr=input_cost + output_cost,
+        )
+
+        return TenderLLMExtractionResult(
+            extraction=extraction,
+            usage=usage,
+        )
