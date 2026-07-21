@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+
+# Environment files
+.env
+
+# Local logs
+logs/
+*.log
+
+# Airflow logs
+airflow/logs/
+
+# Local data
+data/
+
+# Tests
+tests/
+
+# Docker
+docker-compose*.yml

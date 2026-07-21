@@ -1,0 +1,156 @@
+name: gem_pipeline
+
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.10.5
+  restart: unless-stopped
+  init: true
+  env_file:
+    - .env
+  environment:
+    # Airflow core
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+
+    # Airflow metadata DB (separate from app DB)
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@postgres:5432/${AIRFLOW_DB_NAME}
+
+    # Optional hardening
+    AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "False"
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/plugins:/opt/airflow/plugins
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "5"
+  depends_on:
+    postgres:
+      condition: service_healthy
+  networks:
+    - gem-network
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: gem-postgres
+    restart: unless-stopped
+    init: true
+    environment:
+      # App DB
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Optional: init script to create airflow DB/user on first boot
+      # - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - gem-network
+    # Do NOT expose publicly unless needed
+    # ports:
+    #   - "5432:5432"
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init
+    restart: "no"
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        set -euo pipefail
+        airflow db migrate
+        airflow users create \
+          --role Admin \
+          --username "${AIRFLOW_ADMIN_USERNAME}" \
+          --password "${AIRFLOW_ADMIN_PASSWORD}" \
+          --firstname "${AIRFLOW_ADMIN_FIRSTNAME}" \
+          --lastname "${AIRFLOW_ADMIN_LASTNAME}" \
+          --email "${AIRFLOW_ADMIN_EMAIL}" || true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    command: webserver
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "airflow", "jobs", "check", "--job-type", "SchedulerJob", "--hostname", "$$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gem-pipeline
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["python", "-m", "app.cli.test_gem_pipeline"]
+    volumes:
+      - ./data:/app/data
+      - ./configs:/app/configs
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import app"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - gem-network
+
+volumes:
+  postgres_data:
+
+networks:
+  gem-network:
+    driver: bridge
