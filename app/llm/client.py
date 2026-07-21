@@ -9,7 +9,6 @@ import requests
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
-from sqlalchemy import text
 
 from app.config import settings
 from app.llm.schemas import (
@@ -275,52 +274,6 @@ class OpenAILLMExtractor:
         return TenderLLMExtractionResult(extraction=extraction, usage=usage)
 
 
-class SafeLLMExtractor:
-    def __init__(
-        self, primary: BaseLLMExtractor, fallback: BaseLLMExtractor | None = None
-    ) -> None:
-        self.primary = primary
-        self.fallback = fallback
-
-    def extract_tender_details(self, text: str) -> TenderLLMExtractionResult:
-        try:
-            return self.primary.extract_tender_details(text)
-        except Exception as exc:
-            if self.fallback is not None:
-                # Log structured fallback event without exposing sensitive info
-                print(
-                    {
-                        "event": "llm_fallback_triggered",
-                        "primary_error": str(exc),
-                        "fallback_provider": "fake",
-                    }
-                )
-                result = self.fallback.extract_tender_details(text)
-                result.usage.fallback_used = True
-                return result
-            raise
-
-
-def get_llm_extractor() -> BaseLLMExtractor:
-    provider = settings.LLM_PROVIDER.strip().lower()
-
-    if provider == "fake":
-        return FakeLLMExtractor()
-
-    if provider == "ollama":
-        primary = OllamaLLMExtractor()
-        if settings.LLM_FALLBACK_TO_FAKE_ON_ERROR:
-            return SafeLLMExtractor(primary=primary, fallback=FakeLLMExtractor())
-        return primary
-
-    if provider == "openai":
-        primary = OpenAILLMExtractor()
-        if settings.LLM_FALLBACK_TO_FAKE_ON_ERROR:
-            return SafeLLMExtractor(primary=primary, fallback=FakeLLMExtractor())
-        return primary
-
-    raise ValueError(f"Unsupported LLM provider: {settings.LLM_PROVIDER}")
-
 class GeminiLLMExtractor:
     def __init__(self) -> None:
         self.system_prompt = _load_system_prompt()
@@ -402,3 +355,49 @@ class GeminiLLMExtractor:
             extraction=extraction,
             usage=usage,
         )
+
+class SafeLLMExtractor:
+    def __init__(
+        self, primary: BaseLLMExtractor, fallback: BaseLLMExtractor | None = None
+    ) -> None:
+        self.primary = primary
+        self.fallback = fallback
+
+    def extract_tender_details(self, text: str) -> TenderLLMExtractionResult:
+        try:
+            return self.primary.extract_tender_details(text)
+        except Exception as exc:
+            if self.fallback is not None:
+                # Log structured fallback event without exposing sensitive info
+                print(
+                    {
+                        "event": "llm_fallback_triggered",
+                        "primary_error": str(exc),
+                        "fallback_provider": "fake",
+                    }
+                )
+                result = self.fallback.extract_tender_details(text)
+                result.usage.fallback_used = True
+                return result
+            raise
+
+
+def get_llm_extractor() -> BaseLLMExtractor:
+    provider = settings.LLM_PROVIDER.strip().lower()
+
+    if provider == "fake":
+        return FakeLLMExtractor()
+
+    if provider == "ollama":
+        primary = OllamaLLMExtractor()
+        if settings.LLM_FALLBACK_TO_FAKE_ON_ERROR:
+            return SafeLLMExtractor(primary=primary, fallback=FakeLLMExtractor())
+        return primary
+
+    if provider == "openai":
+        primary = OpenAILLMExtractor()
+        if settings.LLM_FALLBACK_TO_FAKE_ON_ERROR:
+            return SafeLLMExtractor(primary=primary, fallback=FakeLLMExtractor())
+        return primary
+
+    raise ValueError(f"Unsupported LLM provider: {settings.LLM_PROVIDER}")
